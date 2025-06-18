@@ -12,13 +12,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def root():
     return FileResponse("static/index.html", media_type="text/html")
 
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+# cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+# cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-#cap = cv2.VideoCapture("/dev/video3", cv2.CAP_V4L2)
-#cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2592)
-#cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1944)
+pipeline = "v4l2src device=/dev/video3 ! video/x-raw ! videoconvert ! appsink"
+cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2592)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1944)
 
 # Lock for thread-safe frame reading
 lock = threading.Lock()
