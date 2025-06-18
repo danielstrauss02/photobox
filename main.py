@@ -16,10 +16,8 @@ async def root():
 # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-pipeline = "v4l2src device=/dev/video3 ! video/x-raw ! videoconvert ! appsink"
+pipeline = "v4l2src device=/dev/video3 ! video/x-raw,framerate=15/1,width=640,height=480 ! jpegenc ! appsink emit-signals=true sync=false caps=image/jpeg"
 cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2592)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1944)
 
 # Lock for thread-safe frame reading
 lock = threading.Lock()
@@ -27,13 +25,10 @@ lock = threading.Lock()
 def generate_frames():
     while True:
         with lock:
-            success, frame = cap.read()
+            success, jpeg_frame = cap.read()
         if not success:
             continue
-        ret, buffer = cv2.imencode('.jpg', frame)
-        if not ret:
-            continue
-        frame_bytes = buffer.tobytes()
+        frame_bytes = jpeg_frame.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
@@ -44,8 +39,7 @@ async def video_feed():
 @app.get("/snapshot")
 async def snapshot():
     with lock:
-        success, frame = cap.read()
+        success, jpeg_frame = cap.read()
     if not success:
         return Response(status_code=500)
-    ret, buffer = cv2.imencode('.jpg', frame)
-    return Response(content=buffer.tobytes(), media_type="image/jpeg")
+    return Response(content=jpeg_frame.tobytes(), media_type="image/jpeg")
